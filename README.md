@@ -1,70 +1,84 @@
-# URL Shortener Take-Home Project
-Welcome to the Pocket Worlds URL Shortener Take-Home Project! In this repository, we'd like you to demonstrate your
-engineering skills by creating a small Python project that implements a URL Shortener web service.
-
-This project will serve as the primary jumping off point for our technical interviews.
-
-## Project Description
-Using the provided Python project template, your task is to implement a URL Shortener web service that exposes
-the following API endpoints:
-
-* POST `/url/shorten`: accepts a URL to shorten (e.g. https://www.google.com) and returns a short URL that 
-  can be resolved at a later time (e.g. http://localhost:8000/r/abc)
-* GET `r/<short_url>`: resolve the given short URL (e.g. http://localhost:8000/r/abc) to its original URL
-  (e.g. https://www.google.com). If the short URL is unknown, an HTTP 404 response is returned.
-
-Your solution must support running the URL shortener service with multiple workers.
-
-For example, it should be possible  to start two instances of the service, make a request to shorten a URL
-to one instance, and be able to resolve that shortened URL by sending subsequent request to the second instance. 
-
-## Getting Started
+## Getting Started - John Muniz Implementation
 
 To begin the project, clone this repository to your local machine:
 
 ```commandline
-git clone https://github.com/pocketzworld/url-shortener-tech-test.git
+git clone https://github.com/Johnny156/url-shortener-tech-test.git
 ```
 
-This repository contains a skeleton of the URL Shortener web service written in Python 3.11
+This repository contains the implementation of a URL Shortener web service written in Python 3.11
 using the [FastAPI](https://fastapi.tiangolo.com/) framework.
 
-The API endpoints can be found in `server.py`.
+The API endpoints found in `server.py` have been implemented with proper business logic supported by a Redis datastore.
 
-A Makefile and Dockerfile are also included for your convenience to run and test the web service.
+A Makefile, Dockerfile, and docker-compose.yml are also included for your convenience to run and test the web service.
 
-You are not required to use Docker for your implementation, so feel free to modify this project and README
-to reflect how your implementation should be run and tested.
+While Docker is not required to run this service, this implementation utilized Docker to help manage multiple instances
+and a running service of Redis from the [Redis Docker Official Image](https://www.docker.com/blog/how-to-use-the-redis-docker-official-image/).
+
+### Prerequisites
+
+The Redis Docker Official Image needs to be pulled in order to create the Redis container this can be achieved with a simple pull:
+```commandline
+docker pull redis
+```
+
+If you are not running the services with docker-compose a custom network will need to created so the service containers can communicate with the Redis container:
+
+```commandline
+docker create network pocket-network
+```
+
+This `pocket-network` should be referred to in any standalone containers run commands. 
 
 ### Running the service
 
-To run the web service in interactive mode, use the following command:
+#### docker-compose
+
+Included in the project is a `docker-compose.yml` file that should encapsulate a running demo with two instances of the shortener container running on ports `8000` and `8001`, and the running Redis container:
 ```commandline
+docker compose up
+```
+Included, is also a Makefile target which does the same thing:
+```commandline
+make compose
+```
+
+#### Makefile
+I have modified the Makefile to include the custom network in the Docker run commands, and another target to spin up the Redis container:
+
+```commandline
+make redis
 make run
 ```
 
 This command will build a new Docker image (`pw/url-shortener:latest`) and start a container
 instance in interactive mode.
 
-By default, the web service will run on port 8000.
+The web service will run on port 8000, and the default Redis port is 6379.
 
 ### Testing
 
-Swagger UI is available as part of the FastAPI framework that can be used to inspect and test
-the API endpoints of the URL shortener. To access it, start run the web service and go to http://localhost:8000/docs
+The Swagger UI was leveraged as a means of testing the endpoints, although any HTTP client (e.g. Postman, Browser/Dev tools) should suffice:
+* `POST /url/shorten`
+   *  Request Body, Content-Type: application/json, example request
+   *  ```commandline
+      {
+        "url": "https://www.pocketworlds.com"
+      }
+      ```
+* `GET /r/{short_url}`
+   * The endpoint should return a 404, if the `short_url` is unknown
+   * To test a known `short_url`, I recommend input the fully qualified short URL in the browser as this endpoint should return a redirect.
 
-## Submission Guidelines
-When you have completed the project, please follow these guidelines for submission:
+#### Expected Behaviors
+* Known URLs shortened previous SHOULD return back the same shortened URL
+* the `/url/shorten` endpoint SHOULD validate for proper URL formatting. (But not specifically http!)
+* Reusing the included models and endpoint, the endpoints respond in JSON.
 
-1. Commit and push your code to your GitHub repository.
-2. Update this README with any additional instructions, notes, or explanations regarding your implementation, if necessary.
-3. Provide clear instructions on how to run and test your project.
-4. Share the repository URL with the hiring team or interviewer.
+### Known Quirks
+* While the Redis container is configured to have persistence, it will only have persistence across startup/shutdown of the SAME container. 
+If the container is destroyed and remade, it will lose all its data. Proper mounting of Docker volumes would solve this issue, or moving to some sort of cloud Redis server (e.g. AWS Elasticache)
+* The keys stored in Redis currently do not expire, this could be configured have tokens have a certain time-to-live and expire.
+* The URL shortener tries to generate a (configurable) 8-character random unique token to shorten the URL up to 10 times, and will error out if the attempts are exceeded.
 
-## Additional Information
-Feel free to be creative in how you approach this project. Your solution will be evaluated based on code quality,
-efficiency, and how well it meets the specified requirements. Be prepared to discuss the reasoning behind your
-implementation decisions and their trade-offs.
-
-Good luck, and we look forward to seeing your URL Shortener project! If you have any questions or need
-clarifications, please reach out to us.

@@ -1,0 +1,12 @@
+version: '3'
+services:
+  shortener-one:
+    build: .
+    ports:
+      - "8000:8000/tcp"
+  shortner-two:
+    build: .
+    ports:
+      - "8001:8000/tcp"
+  pocket-redis:
+    image: "redis"
